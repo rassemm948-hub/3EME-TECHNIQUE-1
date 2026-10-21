@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>الكساحة: أساطير البخلاء - أبو سعيد المدائني</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts for Retro Arabic Style -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Changa:wght@400;600;800;900&family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Changa', sans-serif;
+            background-color: #0d0704;
+            color: #f3e5ab;
+            user-select: none;
+            touch-action: manipulation;
+            overflow: hidden;
+        }
+
+        .font-pixel {
+            font-family: 'Press Start 2P', cursive;
+        }
+
+        /* Arcade Glowing UI Elements */
+        .arcade-box {
+            background: rgba(28, 16, 9, 0.92);
+            border: 3px solid #b45309;
+            box-shadow: 0 0 15px rgba(180, 83, 9, 0.4), inset 0 0 10px rgba(0,0,0,0.8);
+        }
+
+        .btn-retro {
+            background: linear-gradient(180deg, #f59e0b 0%, #b45309 100%);
+            border: 2px solid #fef3c7;
+            box-shadow: 0 4px 0 #78350f, 0 0 10px rgba(245, 158, 11, 0.3);
+            text-shadow: 1px 1px 2px #000;
+            transition: all 0.1s ease;
+        }
+
+        .btn-retro:active {
+            transform: translateY(3px);
+            box-shadow: 0 1px 0 #78350f;
+        }
+
+        .btn-skill {
+            background: linear-gradient(180deg, #3b82f6 0%, #1d4ed8 100%);
+            border: 2px solid #bfdbfe;
+            box-shadow: 0 4px 0 #1e3a8a;
+        }
+
+        canvas {
+            image-rendering: pixelated;
+            border: 4px solid #b45309;
+            box-shadow: 0 0 25px rgba(245, 158, 11, 0.25);
+        }
+
+        /* Screen Shake Animation */
+        .shake {
+            animation: shakeAnim 0.3s cubic-bezier(.36,.07,.19,.97) both;
+        }
+
+        @keyframes shakeAnim {
+            10%, 90% { transform: translate3d(-2px, 1px, 0); }
+            20%, 80% { transform: translate3d(3px, -2px, 0); }
+            30%, 50%, 70% { transform: translate3d(-5px, 3px, 0); }
+            40%, 60% { transform: translate3d(5px, -3px, 0); }
+        }
+
+        .combo-pulse {
+            animation: pulseText 0.4s ease-in-out infinite alternate;
+        }
+
+        @keyframes pulseText {
+            0% { transform: scale(1); }
+            100% { transform: scale(1.15); }
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen p-1 md:p-3 select-none">
+
+    <!-- Header Banner -->
+    <div class="text-center mb-1 z-10 w-full max-w-3xl">
+        <h1 class="text-xl md:text-3xl font-black text-amber-400 drop-shadow-[0_3px_5px_rgba(0,0,0,0.9)] tracking-wide flex items-center justify-center gap-2">
+            <span>✨</span> الكساحة: أساطير البخلاء <span>✨</span>
+        </h1>
+        <p class="text-xs md:text-sm text-amber-200/90 font-semibold">مغامرة أبو سعيد المدائني | كتاب البخلاء للشيخ الجاحظ (3 ثانوي)</p>
+    </div>
+
+    <!-- Main Game Frame -->
+    <div id="gameContainer" class="relative w-full max-w-3xl flex flex-col items-center">
+
+        <!-- Top Arcade HUD -->
+        <div id="gameUI" class="w-full flex justify-between items-center bg-stone-950/90 border-2 border-amber-700 rounded-t-xl p-2 text-xs md:text-sm text-amber-100 font-bold shadow-lg">
+            <div class="flex items-center gap-1 md:gap-3">
+                <span class="text-amber-400">💰 الدراهم:</span>
+                <span id="scoreVal" class="text-yellow-300 font-extrabold text-base md:text-xl">0</span>
+            </div>
+
+            <!-- Combo Badge -->
+            <div id="comboBadge" class="hidden bg-gradient-to-r from-red-600 to-amber-500 px-2 py-0.5 rounded-full text-white text-xs font-black combo-pulse shadow-lg">
+                x<span id="comboVal">1</span> مضاعف!
+            </div>
+
+            <div class="flex items-center gap-1 md:gap-3">
+                <span>❤️ الصحة:</span>
+                <span id="healthVal" class="text-red-500 font-extrabold text-base">❤️❤️❤️</span>
+            </div>
+
+            <div class="flex items-center gap-1 md:gap-3">
+                <span>⏳ الوقت:</span>
+                <span id="timeVal" class="text-cyan-400 font-extrabold text-base">60s</span>
+            </div>
+        </div>
+
+        <!-- Canvas Container -->
+        <div class="relative w-full aspect-[4/3] max-h-[62vh] overflow-hidden rounded-b-xl">
+            <canvas id="gameCanvas" class="w-full h-full"></canvas>
+
+            <!-- Active Power-up Overlay Notification -->
+            <div id="powerupBanner" class="absolute top-12 left-1/2 -translate-x-1/2 hidden bg-amber-500/90 text-stone-950 px-4 py-1 rounded-full font-black text-xs md:text-sm border border-yellow-200 shadow-lg z-10 transition-all">
+                ⚡ قدرة نشطة!
+            </div>
+
+            <!-- Overlay Screen (Start / Pause / Game Over) -->
+            <div id="overlayScreen" class="absolute inset-0 bg-stone-950/90 backdrop-blur-md flex flex-col items-center justify-center p-4 text-center z-20 transition-all">
+
+                <!-- Start Screen -->
+                <div id="startMenu" class="space-y-3 max-w-lg">
+                    <h2 class="text-2xl md:text-3xl font-extrabold text-amber-400 border-b-2 border-amber-800/80 pb-2">
+                        📜 فن التدوير عند البخلاء!
+                    </h2>
+                    <p class="text-xs md:text-sm text-amber-100 leading-relaxed text-right bg-stone-900/90 p-3 rounded-lg border border-amber-900/60 shadow-inner">
+                        ساعد <span class="text-amber-400 font-bold">أبا سعيد المدائني</span> في جمع قمامة الدار والجيران لفرزها وبيعها للدكاكين المناسبة! استعمل المهارات الخارقة وحافظ على الكومبو لجمع أضخم ثروة في سوق بغداد!
+                    </p>
+
+                    <!-- Stalls Guide Grid -->
+                    <div class="grid grid-cols-2 gap-1.5 text-[11px] text-amber-200 text-right bg-stone-950 p-2.5 rounded-lg border border-stone-800">
+                        <div>🧵 صوف ⬅️ 1. البراذعية</div>
+                        <div>👗 خرق ⬅️ 2. الصلاحيات</div>
+                        <div>🥭 قشور ⬅️ 3. الصباغون</div>
+                        <div>🍾 زجاج ⬅️ 4. الزجاجون</div>
+                        <div>🔩 حديد ونوى ⬅️ 5. الحدادون</div>
+                        <div class="text-red-400 font-bold">🔥 جمر / 🐕 كلب ⬅️ احذر!</div>
+                    </div>
+
+                    <div class="flex items-center justify-between gap-2 pt-1">
+                        <button id="soundToggleBtn" onclick="toggleAudio()" class="bg-stone-800 hover:bg-stone-700 text-amber-300 px-3 py-2 rounded-lg text-xs font-bold border border-amber-700/50">
+                            🔊 الصوت: تشغيل
+                        </button>
+                        <button onclick="startGame()" class="btn-retro px-6 py-3 text-base md:text-lg font-black text-stone-950 rounded-xl cursor-pointer flex-1">
+                            🚀 ابدأ جمع الكساحة!
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Game Over Screen -->
+                <div id="gameOverMenu" class="hidden space-y-3 max-w-lg w-full">
+                    <h2 id="gameOverTitle" class="text-2xl md:text-3xl font-extrabold text-amber-400">انتهى يوم الجمع!</h2>
+                    
+                    <div class="arcade-box p-4 rounded-xl space-y-2 text-amber-100 border border-amber-700 text-right">
+                        <div class="flex justify-between items-center border-b border-amber-900/60 pb-2">
+                            <span class="text-sm">💰 الدراهم المجمعة:</span>
+                            <span id="finalScore" class="text-yellow-400 text-2xl font-black">0</span>
+                        </div>
+                        <div class="flex justify-between items-center border-b border-amber-900/60 pb-2">
+                            <span class="text-sm">🔥 أعلى كومبو:</span>
+                            <span id="finalCombo" class="text-orange-400 text-xl font-bold">x1</span>
+                        </div>
+                        <div>
+                            <span class="text-xs text-amber-300">اللقب المستحق من الجاحظ:</span>
+                            <p id="playerRank" class="text-base md:text-lg text-emerald-400 font-extrabold mt-0.5">أبو سعيد الاقتصادي</p>
+                        </div>
+                        <div id="jahizQuote" class="text-xs italic text-amber-300/90 mt-2 bg-amber-950/40 p-2 rounded border-r-2 border-amber-500">
+                            <!-- Quote inserted dynamically -->
+                        </div>
+                    </div>
+
+                    <button onclick="startGame()" class="btn-retro px-8 py-3 text-lg font-black text-stone-950 rounded-xl cursor-pointer w-full">
+                        🔄 العب جولة جديدة
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Power-Ups Quick Bar -->
+        <div class="w-full grid grid-cols-3 gap-2 mt-2">
+            <button onclick="usePowerup('slow')" id="pwrSlow" class="btn-skill p-1.5 md:p-2 rounded-lg text-xs font-bold text-white flex items-center justify-center gap-1 opacity-50 cursor-not-allowed">
+                <span>🧙‍♂️ حكمة الجاحظ</span>
+                <span class="text-[10px] bg-blue-900/80 px-1 rounded">[بطء]</span>
+            </button>
+            <button onclick="usePowerup('magnet')" id="pwrMagnet" class="btn-skill p-1.5 md:p-2 rounded-lg text-xs font-bold text-white flex items-center justify-center gap-1 opacity-50 cursor-not-allowed">
+                <span>🧹 المكنسة</span>
+                <span class="text-[10px] bg-blue-900/80 px-1 rounded">[شفط]</span>
+            </button>
+            <button onclick="usePowerup('double')" id="pwrDouble" class="btn-skill p-1.5 md:p-2 rounded-lg text-xs font-bold text-white flex items-center justify-center gap-1 opacity-50 cursor-not-allowed">
+                <span>✨ مضاعف</span>
+                <span class="text-[10px] bg-blue-900/80 px-1 rounded">[x2]</span>
+            </button>
+        </div>
+
+        <!-- Mobile Touch Controls -->
+        <div class="w-full grid grid-cols-5 gap-1.5 mt-2 md:hidden">
+            <button id="btnLeft" class="btn-retro p-3 text-xl rounded-lg font-black text-stone-950">◄</button>
+            <button id="btnRight" class="btn-retro p-3 text-xl rounded-lg font-black text-stone-950">►</button>
+            <button id="btnSort1" onclick="classifyHeldItem(1)" class="btn-retro p-2 text-xs rounded-lg font-bold text-stone-950">🧵1</button>
+            <button id="btnSort2" onclick="classifyHeldItem(2)" class="btn-retro p-2 text-xs rounded-lg font-bold text-stone-950">👗2</button>
+            <button id="btnSort3" onclick="classifyHeldItem(3)" class="btn-retro p-2 text-xs rounded-lg font-bold text-stone-950">🥭3</button>
+        </div>
+        <div class="w-full grid grid-cols-2 gap-1.5 mt-1 md:hidden">
+            <button id="btnSort4" onclick="classifyHeldItem(4)" class="btn-retro p-2 text-xs rounded-lg font-bold text-stone-950">🍾 4. الزجاجين</button>
+            <button id="btnSort5" onclick="classifyHeldItem(5)" class="btn-retro p-2 text-xs rounded-lg font-bold text-stone-950">🔩 5. الحدادين</button>
+        </div>
+
+        <p class="hidden md:block text-xs text-amber-400/80 mt-2 text-center font-medium">
+            🎮 التحكم: الأسهم ◄ ► للتحرك | الأرقام [1 - 5] للفرز المباشر والدفع للدكاكين | [Z, X, C] لتفعيل القدرات
+        </p>
+    </div>
+
+    <!-- Literary Citation Drawer -->
+    <div class="w-full max-w-3xl mt-2 arcade-box rounded-xl p-2.5 text-xs text-amber-200/90">
+        <details>
+            <summary class="font-bold text-amber-400 cursor-pointer hover:underline flex items-center gap-1">
+                📖 الشاهد الأدبي: نص «الكساحة» من كتاب البخلاء للشيخ الجاحظ
+            </summary>
+            <p class="mt-2 leading-relaxed text-justify border-t border-amber-900/60 pt-2 text-amber-100">
+                «وكان أبو سعيد المدائني لا يدع خادمه تخرج الكساحة من داره، بل يأمرها بجمع قمامة الجيران، ثم يجلس لفرزها بنفسه: فيبيع الصوف لأصحاب البراذع، والخرق لأصحاب الصنيات، وقشور الرمان للصبّاجين، والقوارير للزجاجين، ونوى التمر والحديد للحرفيين... ليحول البخل إلى إدارة واقتصاد عجيب!»
+            </p>
+        </details>
+    </div>
+
+    <script>
+        // --- Web Audio & Procedural Retro Tunes Engine ---
+        const SoundSystem = {
+            ctx: null,
+            enabled: true,
+            bgInterval: null,
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            },
+            playTone(freq, type, duration, gainVal = 0.1) {
+                if (!this.enabled || !this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = type;
+                    osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+                    gain.gain.setValueAtTime(gainVal, this.ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + duration);
+                } catch (e) {}
+            },
+            playCoin() {
+                if (!this.enabled || !this.ctx) return;
+                this.playTone(987.77, 'square', 0.1, 0.12);
+                setTimeout(() => this.playTone(1318.51, 'square', 0.2, 0.12), 80);
+            },
+            playCombo() {
+                if (!this.enabled || !this.ctx) return;
+                [523.25, 659.25, 783.99, 1046.50].forEach((f, i) => {
+                    setTimeout(() => this.playTone(f, 'triangle', 0.15, 0.15), i * 60);
+                });
+            },
+            playHurt() {
+                if (!this.enabled || !this.ctx) return;
+                this.playTone(180, 'sawtooth', 0.2, 0.25);
+                setTimeout(() => this.playTone(90, 'sawtooth', 0.25, 0.25), 50);
+            },
+            playPowerup() {
+                if (!this.enabled || !this.ctx) return;
+                [440, 554.37, 659.25, 880].forEach((f, i) => {
+                    setTimeout(() => this.playTone(f, 'sine', 0.12, 0.15), i * 50);
+                });
+            },
+            startRetroBGM() {
+                if (!this.enabled || this.bgInterval) return;
+                const notes = [293.66, 329.63, 349.23, 392.00, 440.00, 392.00, 349.23, 329.63]; // Oriental D-minor feel
+                let step = 0;
+                this.bgInterval = setInterval(() => {
+                    if (isPlaying && this.enabled) {
+                        this.playTone(notes[step % notes.length], 'triangle', 0.18, 0.03);
+                        step++;
+                    }
+                }, 220);
+            },
+            stopBGM() {
+                if (this.bgInterval) {
+                    clearInterval(this.bgInterval);
+                    this.bgInterval = null;
+                }
+            }
+        };
+
+        function toggleAudio() {
+            SoundSystem.enabled = !SoundSystem.enabled;
+            const btn = document.getElementById('soundToggleBtn');
+            btn.innerText = SoundSystem.enabled ? '🔊 الصوت: تشغيل' : '🔇 الصوت: مكتوم';
+            if (!SoundSystem.enabled) SoundSystem.stopBGM();
+            else if (isPlaying) SoundSystem.startRetroBGM();
+        }
+
+        // --- Config & Items ---
+        const ITEMS_CONFIG = [
+            { id: 'wool', name: 'صوف', target: 1, icon: '🧵', color: '#e5e7eb' },
+            { id: 'rag', name: 'خرق ثياب', target: 2, icon: '👗', color: '#f43f5e' },
+            { id: 'peel', name: 'قشور رمان', target: 3, icon: '🥭', color: '#f97316' },
+            { id: 'glass', name: 'قوارير', target: 4, icon: '🍾', color: '#06b6d4' },
+            { id: 'iron', name: 'حديد ونوى', target: 5, icon: '🔩', color: '#a1a1aa' },
+            { id: 'hazard', name: 'جمر ملتهب', target: 0, icon: '🔥', color: '#ef4444', bad: true },
+            { id: 'dog', name: 'كلب ضال', target: 0, icon: '🐕', color: '#b45309', bad: true },
+            { id: 'maid', name: 'خادمة تكنس', target: 0, icon: '🧹', color: '#ec4899', bad: true }
+        ];
+
+        const STALLS = [
+            { id: 1, name: 'البراذعية', item: 'صوف 🧵', highlight: false },
+            { id: 2, name: 'الصلاحيات', item: 'خرق 👗', highlight: false },
+            { id: 3, name: 'الصباغون', item: 'قشور 🥭', highlight: false },
+            { id: 4, name: 'الزجاجون', item: 'قوارير 🍾', highlight: false },
+            { id: 5, name: 'الحدادون', item: 'حديد 🔩', highlight: false }
+        ];
+
+        const JAHIZ_QUOTES = [
+            "«قال الجاحظ: ومَن لم يَحسَب النَّفَقَةَ لَمْ يَعرِف القِيمَة!»",
+            "«العِلْمُ بالحِفْظِ والتَّدْبِيرِ أجدَى مِن كَثْرَةِ الكَسْبِ المَضُوعِ.»",
+            "«إنّ أبا سعيدٍ لم يَدَع جُلادةً ولا شظيّةً إلا أردَفَهَا بمَنفَعة!»",
+            "«البُخْلُ عندَ أصحابِهِ طاقَةٌ واقتِصاد، وعِندَ النّاسِ سُخرِيَةٌ ومُزاح!»"
+        ];
+
+        // --- Game Engine Variables ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let score = 0;
+        let health = 3;
+        let timeLeft = 60;
+        let combo = 0;
+        let maxCombo = 0;
+        let gameLoopId = null;
+        let timerInterval = null;
+        let isPlaying = false;
+
+        // Active Powerups State
+        const powerups = {
+            slow: { active: false, time: 0, ready: true },
+            magnet: { active: false, time: 0, ready: true },
+            double: { active: false, time: 0, ready: true }
+        };
+
+        // Player Model (Abu Said)
+        const player = {
+            x: 0,
+            y: 0,
+            width: 52,
+            height: 65,
+            speed: 8,
+            holdingItem: null,
+            animFrame: 0
+        };
+
+        let fallingItems = [];
+        let particles = [];
+        let activeFloatingTexts = [];
+
+        // --- Resize & Setup ---
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+            player.y = canvas.height - 90;
+            if (player.x > canvas.width - player.width) {
+                player.x = canvas.width - player.width;
+            }
+        }
+        window.addEventListener('resize', resizeCanvas);
+
+        // --- Keyboard & Touch Controls ---
+        const keys = { left: false, right: false };
+
+        window.addEventListener('keydown', (e) => {
+            if (!isPlaying) return;
+            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = true;
+            if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = true;
+
+            if (['1', '2', '3', '4', '5'].includes(e.key)) {
+                classifyHeldItem(parseInt(e.key));
+            }
+
+            // Powerup triggers
+            if (e.key === 'z' || e.key === 'Z') usePowerup('slow');
+            if (e.key === 'x' || e.key === 'X') usePowerup('magnet');
+            if (e.key === 'c' || e.key === 'C') usePowerup('double');
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keys.left = false;
+            if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keys.right = false;
+        });
+
+        // Touch Listeners
+        document.getElementById('btnLeft').addEventListener('touchstart', (e) => { e.preventDefault(); keys.left = true; });
+        document.getElementById('btnLeft').addEventListener('touchend', (e) => { e.preventDefault(); keys.left = false; });
+        document.getElementById('btnRight').addEventListener('touchstart', (e) => { e.preventDefault(); keys.right = true; });
+        document.getElementById('btnRight').addEventListener('touchend', (e) => { e.preventDefault(); keys.right = false; });
+
+        // --- Core Gameplay Actions ---
+        function startGame() {
+            SoundSystem.init();
+            SoundSystem.startRetroBGM();
+            resizeCanvas();
+
+            score = 0;
+            health = 3;
+            timeLeft = 60;
+            combo = 0;
+            maxCombo = 0;
+            fallingItems = [];
+            particles = [];
+            activeFloatingTexts = [];
+            player.holdingItem = null;
+            player.x = canvas.width / 2 - player.width / 2;
+
+            // Reset Powerups
+            Object.keys(powerups).forEach(k => {
+                powerups[k].active = false;
+                powerups[k].time = 0;
+                powerups[k].ready = true;
+            });
+
+            updateUI();
+
+            document.getElementById('overlayScreen').classList.add('hidden');
+            document.getElementById('startMenu').classList.add('hidden');
+            document.getElementById('gameOverMenu').classList.add('hidden');
+
+            isPlaying = true;
+
+            clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                if (!isPlaying) return;
+                timeLeft--;
+
+                // Update Powerup Durations
+                Object.keys(powerups).forEach(k => {
+                    if (powerups[k].active) {
+                        powerups[k].time--;
+                        if (powerups[k].time <= 0) {
+                            powerups[k].active = false;
+                            showPowerupBanner(false);
+                        }
+                    }
+                });
+
+                updateUI();
+                if (timeLeft <= 0) endGame(true);
+            }, 1000);
+
+            cancelAnimationFrame(gameLoopId);
+            gameLoop();
+        }
+
+        function spawnItem() {
+            const spawnRate = powerups.slow.active ? 0.015 : (0.035 + (60 - timeLeft) * 0.0006);
+            if (Math.random() < spawnRate) {
+                const template = ITEMS_CONFIG[Math.floor(Math.random() * ITEMS_CONFIG.length)];
+                fallingItems.push({
+                    ...template,
+                    x: Math.random() * (canvas.width - 35),
+                    y: -30,
+                    size: 32,
+                    speed: (2 + Math.random() * 2.5) * (powerups.slow.active ? 0.4 : 1.0)
+                });
+            }
+        }
+
+        function classifyHeldItem(targetStallId) {
+            if (!player.holdingItem) return;
+
+            const isCorrect = player.holdingItem.target === targetStallId;
+
+            if (isCorrect) {
+                combo++;
+                if (combo > maxCombo) maxCombo = combo;
+
+                const multiplier = (powerups.double.active ? 2 : 1) * (combo >= 5 ? 3 : combo >= 3 ? 2 : 1);
+                const earned = 10 * multiplier;
+                score += earned;
+
+                if (combo >= 3) SoundSystem.playCombo();
+                else SoundSystem.playCoin();
+
+                addFloatingText(`+${earned} درهم! ${multiplier > 1 ? '🔥' : ''}`, player.x, player.y - 25, '#facc15');
+                createParticles(player.x + 25, player.y + 10, '#facc15', 12);
+            } else {
+                combo = 0;
+                score = Math.max(0, score - 5);
+                SoundSystem.playHurt();
+                triggerScreenShake();
+                addFloatingText(`خطأ! -5`, player.x, player.y - 25, '#ef4444');
+                createParticles(player.x + 25, player.y + 10, '#ef4444', 8);
+            }
+
+            player.holdingItem = null;
+            updateUI();
+        }
+
+        function usePowerup(type) {
+            if (!isPlaying || !powerups[type].ready || powerups[type].active) return;
+
+            powerups[type].active = true;
+            powerups[type].time = 8; // 8 seconds duration
+            powerups[type].ready = false;
+
+            SoundSystem.playPowerup();
+
+            let msg = '';
+            if (type === 'slow') msg = '🧙‍♂️ حكمة الجاحظ: إبطاء الزمن!';
+            if (type === 'magnet') msg = '🧹 المكنسة: شفط القمامة!';
+            if (type === 'double') msg = '✨ مضاعف الدراهم الذهبي!';
+
+            showPowerupBanner(true, msg);
+            updateUI();
+        }
+
+        function showPowerupBanner(show, text = '') {
+            const banner = document.getElementById('powerupBanner');
+            if (show) {
+                banner.innerText = text;
+                banner.classList.remove('hidden');
+            } else {
+                banner.classList.add('hidden');
+            }
+        }
+
+        function triggerScreenShake() {
+            const container = document.getElementById('gameContainer');
+            container.classList.add('shake');
+            setTimeout(() => container.classList.remove('shake'), 300);
+        }
+
+        function addFloatingText(text, x, y, color) {
+            activeFloatingTexts.push({ text, x, y, color, alpha: 1.0, life: 35 });
+        }
+
+        function createParticles(x, y, color, count = 8) {
+            for (let i = 0; i < count; i++) {
+                particles.push({
+                    x, y,
+                    vx: (Math.random() - 0.5) * 8,
+                    vy: (Math.random() - 0.5) * 8,
+                    size: Math.random() * 5 + 2,
+                    color,
+                    life: 25
+                });
+            }
+        }
+
+        function updateUI() {
+            document.getElementById('scoreVal').innerText = score;
+            document.getElementById('healthVal').innerText = '❤️'.repeat(Math.max(0, health));
+            document.getElementById('timeVal').innerText = `${timeLeft}s`;
+
+            // Combo UI
+            const comboBadge = document.getElementById('comboBadge');
+            if (combo > 1) {
+                comboBadge.classList.remove('hidden');
+                document.getElementById('comboVal').innerText = combo;
+            } else {
+                comboBadge.classList.add('hidden');
+            }
+
+            // Skill Buttons State
+            ['slow', 'magnet', 'double'].forEach(k => {
+                const btn = document.getElementById(k === 'slow' ? 'pwrSlow' : k === 'magnet' ? 'pwrMagnet' : 'pwrDouble');
+                if (powerups[k].active) {
+                    btn.className = "btn-skill p-1.5 md:p-2 rounded-lg text-xs font-bold text-white flex items-center justify-center gap-1 bg-amber-600 border-yellow-300 ring-2 ring-yellow-400";
+                } else if (powerups[k].ready) {
+                    btn.className = "btn-skill p-1.5 md:p-2 rounded-lg text-xs font-bold text-white flex items-center justify-center gap-1 cursor-pointer opacity-100 hover:scale-105 transition-all";
+                } else {
+                    btn.className = "btn-skill p-1.5 md:p-2 rounded-lg text-xs font-bold text-white flex items-center justify-center gap-1 opacity-40 cursor-not-allowed";
+                }
+            });
+        }
+
+        function endGame(timeUp = false) {
+            isPlaying = false;
+            clearInterval(timerInterval);
+            SoundSystem.stopBGM();
+
+            if (timeUp) SoundSystem.playCombo();
+            else SoundSystem.playHurt();
+
+            document.getElementById('overlayScreen').classList.remove('hidden');
+            document.getElementById('gameOverMenu').classList.remove('hidden');
+            document.getElementById('finalScore').innerText = score;
+            document.getElementById('finalCombo').innerText = `x${maxCombo}`;
+
+            // Determine Title / Rank
+            let rank = "مبتدئ في الكساحة";
+            if (score >= 200) rank = "🏆 ملك التدوير (أبو سعيد الأسطوري)";
+            else if (score >= 120) rank = "💰 صاحب التدبير والوفر العظيم";
+            else if (score >= 60) rank = "📜 جامع الفضلات الفطن";
+
+            document.getElementById('playerRank').innerText = rank;
+            document.getElementById('jahizQuote').innerText = JAHIZ_QUOTES[Math.floor(Math.random() * JAHIZ_QUOTES.length)];
+        }
+
+        // --- Render & Physics Loop ---
+        function update() {
+            // Player movement
+            if (keys.left && player.x > 0) player.x -= player.speed;
+            if (keys.right && player.x < canvas.width - player.width) player.x += player.speed;
+
+            player.animFrame += 0.15;
+
+            spawnItem();
+
+            // Falling Items Processing
+            for (let i = fallingItems.length - 1; i >= 0; i--) {
+                const item = fallingItems[i];
+
+                // Magnet Skill Effect (pull items towards Abu Said)
+                if (powerups.magnet.active && !item.bad) {
+                    const dx = (player.x + player.width / 2) - (item.x + 15);
+                    item.x += dx * 0.08;
+                }
+
+                item.y += item.speed;
+
+                // Collision with player
+                if (
+                    item.x < player.x + player.width &&
+                    item.x + item.size > player.x &&
+                    item.y < player.y + player.height &&
+                    item.y + item.size > player.y
+                ) {
+                    if (item.bad) {
+                        health--;
+                        combo = 0;
+                        SoundSystem.playHurt();
+                        triggerScreenShake();
+                        addFloatingText('ضرر! 💥', player.x, player.y - 20, '#ef4444');
+                        createParticles(player.x + 20, player.y + 20, '#ef4444', 10);
+                        updateUI();
+                        if (health <= 0) endGame(false);
+                    } else {
+                        if (!player.holdingItem) {
+                            player.holdingItem = item;
+                            SoundSystem.playCoin();
+
+                            // Highlight Target Stall
+                            STALLS.forEach(s => s.highlight = (s.id === item.target));
+                        }
+                    }
+                    fallingItems.splice(i, 1);
+                    continue;
+                }
+
+                // Hit Floor
+                if (item.y > canvas.height - 40) {
+                    fallingItems.splice(i, 1);
+                }
+            }
+
+            // Particles animation
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life--;
+                if (p.life <= 0) particles.splice(i, 1);
+            }
+
+            // Floating text animation
+            for (let i = activeFloatingTexts.length - 1; i >= 0; i--) {
+                const ft = activeFloatingTexts[i];
+                ft.y -= 1;
+                ft.life--;
+                if (ft.life <= 0) activeFloatingTexts.splice(i, 1);
+            }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // 1. Draw Market Background (Baghdad Retro Arcade Style)
+            ctx.fillStyle = '#1e110a';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Stalls Header Area
+            const stallWidth = canvas.width / STALLS.length;
+            STALLS.forEach((stall, idx) => {
+                const x = idx * stallWidth;
+                
+                // Stall Awning
+                ctx.fillStyle = (player.holdingItem && player.holdingItem.target === stall.id) ? '#d97706' : (idx % 2 === 0 ? '#3a2212' : '#2b180c');
+                ctx.fillRect(x, 0, stallWidth, 42);
+                ctx.strokeStyle = '#b45309';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(x, 0, stallWidth, 42);
+
+                // Stall Text Label
+                ctx.fillStyle = '#fef3c7';
+                ctx.font = 'bold 11px Changa, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(`${stall.id}. ${stall.name}`, x + stallWidth / 2, 20);
+                ctx.fillStyle = '#fde047';
+                ctx.font = '10px Changa, sans-serif';
+                ctx.fillText(stall.item, x + stallWidth / 2, 35);
+            });
+
+            // Ground / Street Layer
+            ctx.fillStyle = '#2d180c';
+            ctx.fillRect(0, canvas.height - 30, canvas.width, 30);
+            ctx.fillStyle = '#b45309';
+            ctx.fillRect(0, canvas.height - 30, canvas.width, 3);
+
+            // 2. Draw Abu Said Player (Retro Character with animation bounce)
+            const bounceY = Math.sin(player.animFrame) * 2;
+            const px = player.x;
+            const py = player.y + bounceY;
+
+            // Robe / Tunic
+            ctx.fillStyle = '#8b5a2b';
+            ctx.fillRect(px + 10, py + 22, 32, 38);
+
+            // Turban (Abbasid Style)
+            ctx.fillStyle = '#f59e0b';
+            ctx.fillRect(px + 12, py + 2, 28, 16);
+
+            // Face
+            ctx.fillStyle = '#fcd34d';
+            ctx.fillRect(px + 16, py + 16, 20, 14);
+
+            // Beard & Eyes
+            ctx.fillStyle = '#1c1008';
+            ctx.fillRect(px + 19, py + 20, 4, 4); // Eye R
+            ctx.fillRect(px + 29, py + 20, 4, 4); // Eye L
+            ctx.fillRect(px + 14, py + 26, 24, 12); // Abu Said Big Beard
+
+            // Canvas Sack
+            ctx.fillStyle = '#78350f';
+            ctx.fillRect(px - 4, py + 30, 20, 28);
+
+            // Indicator above player if holding item
+            if (player.holdingItem) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+                ctx.fillRect(px - 10, py - 32, 72, 26);
+                ctx.strokeStyle = player.holdingItem.color;
+                ctx.lineWidth = 2;
+                ctx.strokeRect(px - 10, py - 32, 72, 26);
+
+                ctx.font = '16px sans-serif';
+                ctx.fillText(player.holdingItem.icon, px + 5, py - 14);
+                ctx.fillStyle = '#fde047';
+                ctx.font = 'bold 11px Changa, sans-serif';
+                ctx.fillText(`ادفع لـ [${player.holdingItem.target}]`, px + 42, py - 14);
+            }
+
+            // 3. Draw Falling Items
+            fallingItems.forEach(item => {
+                ctx.fillStyle = 'rgba(0,0,0,0.4)';
+                ctx.beginPath();
+                ctx.arc(item.x + 16, item.y + 16, 16, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.font = '22px sans-serif';
+                ctx.textAlign = 'left';
+                ctx.fillText(item.icon, item.x + 4, item.y + 22);
+            });
+
+            // 4. Draw Particles
+            particles.forEach(p => {
+                ctx.fillStyle = p.color;
+                ctx.fillRect(p.x, p.y, p.size, p.size);
+            });
+
+            // 5. Floating Score / Combo Texts
+            activeFloatingTexts.forEach(ft => {
+                ctx.fillStyle = ft.color;
+                ctx.font = 'black 14px Changa, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(ft.text, ft.x, ft.y);
+            });
+        }
+
+        function gameLoop() {
+            if (!isPlaying) return;
+            update();
+            draw();
+            gameLoopId = requestAnimationFrame(gameLoop);
+        }
+
+        window.onload = () => {
+            resizeCanvas();
+        };
+    </script>
+</body>
+</html>
